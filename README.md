@@ -1,2 +1,1 @@
 # pyCzytnik
-Czytnik.
