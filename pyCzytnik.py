@@ -1,6 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import os, random, argparse, time, sys
+import sqlite3, datetime
+
+databaseFile = 'database.db'
+
+# Łączymy się z bazą danych.
+conn = sqlite3.connect(databaseFile)
+#Tworzymy tabele jeżeli nie istnieją
+conn.execute("create table if not exists notatki ( notatka TEXT, \
+						   data DATE)")
+
+conn.execute("create table if not exists zapisy ( czas DATETIME, cardid int)")
 
 class colors:
     RED 	= '\033[91m'
@@ -110,11 +121,20 @@ class Cdzien:
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--cardnr", 	type=int, 		 		required=False)
 parser.add_argument("-m", "--month", 	type=int, 		 		required=False)
-#parser.add_argument("-o", "--outputfile", 	type=str, 		 		required=False)
-#parser.add_argument("-k", "--keyfile", 		type=str, 		 		required=False)
+parser.add_argument("-a", "--addlog", 	type=str, 		 		required=False)
+parser.add_argument("-l", "--log", 	action='store_true', 		 		required=False)
 #parser.add_argument("-c", "--crypt", 		action='store_true', 	required=False)
-#parser.add_argument("-n", "--newkey", 		type=int, 				required=False)
 args = parser.parse_args()
+
+# Dodajemy nowego loga
+if (args.addlog):
+    conn.execute('INSERT INTO notatki VALUES (?,?)', (args.addlog, datetime.date.today()) );
+    #Zapis danych i zamknięcie bazydanych.
+    conn.commit()
+    conn.close()
+    sys.exit()
+
+
 
 # TODO
 # - Dodac klase person
@@ -124,16 +144,6 @@ args = parser.parse_args()
 
 katalog = os.getenv("HOME") + "/Dokumenty/czytnik/"
 filename = "RCPTMP.fil"
-
-a = Cczas(8,57,0)
-b = Cczas(9,00,0)
-c = a.odejmijCzas(b)
-
-print a.strCzas() + " - " + b.strCzas() + " = " + c.strCzas()
-
-
-#sys.exit()
-
 
 #Odczyt z pliku
 filename = katalog + filename
@@ -182,6 +192,11 @@ for i in range(1,31):
 			# Wyświetlamy dane
 			dni[i].wyswietlDzien()
 
+                        # Wyświetlamy log'a jeżeli trzeba
+                        if (args.log):
+                            for record in conn.execute("SELECT * FROM notatki WHERE czas =" + datetime.date(2015, args.month, dni[i].numerdnia)):
+                                print record
+
 			#Obliczenia miesieczne
 			przepracowane.dodajCzas( dni[i].dniowka )
 			niedogodziny.dodajCzas( dni[i].roznica )
@@ -193,7 +208,6 @@ if (niedogodziny.znak > 0 ):
 else:
 	sys.stdout.write(colors.RED + " Musisz odrobić"+ niedogodziny.strCzas() + colors.ENDC + ".\n" );
 
-
-
-
-
+#Zapis danych i zamknięcie bazydanych.
+conn.commit()
+conn.close()
