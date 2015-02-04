@@ -12,6 +12,9 @@ class colors:
     WHITE	= '\033[97m'
     ENDC 	= '\033[0m'
 
+def testCzas(a,b):
+		c = a - b
+		print a.strCzas() + " - " + b.strCzas() + " = " + c.strCzas()
 
 class Cczas:
 
@@ -19,17 +22,34 @@ class Cczas:
 				self.godzina = g
 				self.minuta = m
 				self.sekunda = s
-				self.znak = ''
+				self.znak = 1
 
-		def odejmijCzas(self, c):
-				myTime 		= self.czasNaUsec()
-				theirTime 	= c.czasNaUsec()
-				diff = myTime - theirTime
-				dc = Cczas(0,0,0)
-				dc.usecNaCzas(abs(diff))
-				if (diff<0):
-					dc.znak = '-'
-				return dc
+		def __add__(self, c):
+				#Zmienna pomocniczna
+				result = Cczas(0,0,0)
+
+				t1 	= self.znak * self.czasNaUsec()
+				t2 	= c.znak * c.czasNaUsec()
+				diff = t1 + t2
+
+				# Zamiana na wynik
+				result.usecNaCzas(abs(diff))
+				result.znak = diff / abs(diff)
+				return result
+		
+		def __sub__(self, c):
+				#Zmienna pomocniczna
+				result = Cczas(0,0,0)
+
+				t1 	= self.znak * self.czasNaUsec()
+				t2 	= c.znak * c.czasNaUsec()
+				diff = t1 - t2
+
+				# Zamiana na wynik
+				result.usecNaCzas(abs(diff))
+				result.znak = diff / abs(diff)
+				return result
+				
 
 		def czasNaUsec(self):
 				myTime = self.godzina * 3600 + self.minuta * 60 + self.sekunda
@@ -42,16 +62,14 @@ class Cczas:
 				self.minuta = usec / 60
 				self.sekunda = usec % 60
 
-		def dodajCzas(self,c):
-				if (c.znak != '-'):
-						myTime 		= self.czasNaUsec() + c.czasNaUsec()
-						self.usecNaCzas(myTime)
-				else:
-						self = self.odejmijCzas(c)
-
 		def strCzas(self):
-				return self.znak + str(self.godzina) + ":" + str(self.minuta) \
-					   + ":" + str(self.sekunda)
+				if (self.znak > 0) :
+						znakChr = ''
+				else:
+						znakChr = '-'
+				return znakChr + format(self.godzina,'02') + ":" \
+								+ format(self.minuta,'02') + ":" \
+								+ format(self.sekunda,'02')
 
 
 
@@ -61,7 +79,7 @@ class Cdzien:
 				self.czasy = []
 				self.numerdnia = n
 				self.dniowka = Cczas(0,0,0)
-				self.roznica = Cczas(8,0,0)
+				self.roznica = Cczas(0,0,0)
 
 		def dodajCzas(self, czas):
 				self.czasy.append(czas)
@@ -69,13 +87,10 @@ class Cdzien:
 		def obliczDniowke(self):
 				i = 0
 				while (i < len(self.czasy)):
-						self.dniowka.dodajCzas( 
-										self.czasy[i+1].odejmijCzas(self.czasy[i]) 
-										)
+						self.dniowka = self.dniowka + (self.czasy[i+1] - self.czasy[i])
 						i += 2
 				#Obliczamy roznice
-				self.roznica = self.dniowka.odejmijCzas(self.roznica)
-				#self.roznica = self.roznica.odejmijCzas(self.dniowka)
+				self.roznica  = self.dniowka - Cczas(8,0,0)
 
 
 		def czyDobryZapis(self):
@@ -123,16 +138,7 @@ args = parser.parse_args()
 # - Zapis do pliku excel
 
 katalog = os.getenv("HOME") + "/Dokumenty/czytnik/"
-filename = "RCPTMP.fil"
-
-a = Cczas(8,57,0)
-b = Cczas(9,00,0)
-c = a.odejmijCzas(b)
-
-print a.strCzas() + " - " + b.strCzas() + " = " + c.strCzas()
-
-
-#sys.exit()
+filename = "mojZapis.fil"
 
 
 #Odczyt z pliku
@@ -167,7 +173,7 @@ while (i<len(content)):
 								dni[day] = Cdzien(day)
 
 						#Dodajemy czas do obiektu
-						dni[day].dodajCzas(Cczas(hour,minute,second));
+						dni[day].dodajCzas( Cczas(hour,minute,second) )
 		i+=1
 
 # Wyświetlanie danych
@@ -183,8 +189,8 @@ for i in range(1,31):
 			dni[i].wyswietlDzien()
 
 			#Obliczenia miesieczne
-			przepracowane.dodajCzas( dni[i].dniowka )
-			niedogodziny.dodajCzas( dni[i].roznica )
+			przepracowane 	= przepracowane +  	dni[i].dniowka 
+			niedogodziny 	= niedogodziny 	+ 	dni[i].roznica 
 
 sys.stdout.write("\n Rozliczenie miesieczne \n");
 sys.stdout.write(" Przepracowane : " + przepracowane.strCzas() + "\n");
